@@ -1,42 +1,63 @@
 import streamlit as st
 import requests
+import pandas as pd
 
+st.set_page_config(
+    page_title="🚕 Taxifare by OS",  # => Quick reference - Streamlit
+    page_icon="🚕",
+    layout="wide",  # wide
+    initial_sidebar_state="collapsed")  # collapsed
 '''
-# Welcome to TaxiFare
-
-
+# 🚕 Welcome to my TaxiFare!
 '''
+columns = st.columns(2)
 
-date = st.date_input("Date du voyage")
-time = st.time_input('Heure du voyage')
-pickup_datetime = f'{date} {time}'
+columns[0].markdown("### Pickup time")
 
-# departure = st.text_input('Adresse de départ :', 'Lille, France')
-# arrival = st.text_input("Adresse d'arrivée :", 'Marseille, France')
+date = columns[0].date_input("Please select a pickup date")
+time = columns[0].time_input(
+    "Please select your pickup time (US/Eastern time)")
 
-pickup_longitude = st.number_input('Longitude de départ :', value=0.0)
-pickup_latitude = st.number_input('Latitude de départ :', value=0.0)
-dropoff_longitude = st.number_input('Longitude d\'arrivée :', value=0.0)
-dropoff_latitude = st.number_input('Latitude d\'arrivée :', value=0.0)
+columns[0].markdown("### Pickup location")
 
-passenger_count = st.slider('Nombre de passagers', 1, 8, 1)
+pickup_lon = columns[0].number_input(
+    "Please select a pickup longitude", value=5.377147392612483)
+pickup_lat = columns[0].number_input(
+    "Please select a pickup latitude", value=43.29449193743676)
 
-if st.button('Combien ça coûte ?'):
-    # print is visible in the server output, not in the page
-    print('button clicked!')
+columns[0].markdown("### Dropoff location")
 
-    url = 'https://taxifare.lewagon.ai/predict'
+dropoff_lon = columns[0].number_input(
+    "Please select a dropoff longitude", value=5.419846881072489)
+dropoff_lat = columns[0].number_input(
+    "Please select a dropoff latitude", value=43.21013513403245)
 
+columns[0].markdown('### Passengers')
+passengers = columns[0].number_input(
+    label="Please select the number of passengers", step=0, min_value=1, max_value=8)
+
+
+def get_map_data():
+    return pd.DataFrame({
+        'lat': [pickup_lat, dropoff_lat],
+        'lon': [pickup_lon, dropoff_lon]
+    })
+
+
+columns[1].map(get_map_data(), zoom=11)
+
+if columns[1].button("➡️ Get my taxi fare"):
+    URL = 'https://taxifare.lewagon.ai/predict'
     params = dict(
-            pickup_datetime=pickup_datetime,
-            pickup_longitude=pickup_longitude,
-            pickup_latitude=pickup_latitude,
-            dropoff_longitude=dropoff_longitude,
-            dropoff_latitude=dropoff_latitude,
-            passenger_count=passenger_count
-        )
-
-    response = requests.get(url, params=params).json()
-
-    fare = round(response["fare"], 1)
-    st.write(f'${fare}')
+        pickup_datetime=f"{date} {time}",
+        pickup_longitude=pickup_lon,
+        pickup_latitude=pickup_lat,
+        dropoff_longitude=dropoff_lon,
+        dropoff_latitude=dropoff_lat,
+        passenger_count=passengers)
+    result = requests.get(URL, params).json()
+    fare = round(result["fare"], 2)
+    columns[1].write(f"# 💵 ${fare+passengers}")
+    st.balloons()
+    if fare > 1000:
+        columns[1].write("⚠️ C'est beaucoup d'argent")
